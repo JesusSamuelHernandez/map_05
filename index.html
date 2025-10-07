@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mapa COVID-19 México - Polígonos</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #f8f9fc;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+            margin-bottom: 1.5rem;
+        }
+        .card-header {
+            padding: 0.75rem 1.25rem;
+            background-color: #f8f9fc;
+            border-bottom: 1px solid #e3e6f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .card-header h6 {
+            color: #4e73df;
+            font-weight: 700;
+            font-size: 1rem;
+            margin: 0;
+        }
+        .card-header .histTitle {
+            color: #333;
+            font-weight: 400;
+        }
+        .card-body {
+            padding: 1.25rem;
+            position: relative;
+        }
+        #map {
+            width: 100%;
+            height: 60vh;
+            border-radius: 4px;
+            position: relative;
+        }
+        .control-buttons {
+            position: absolute;
+            bottom: 40px;
+            left: 50px;
+            z-index: 900;
+        }
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.5rem 1rem;
+            background: #4e73df;
+            color: white;
+            border: none;
+            border-radius: 0.35rem;
+            cursor: pointer;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            box-shadow: 0 0.125rem 0.25rem 0 rgba(58, 59, 69, 0.2);
+        }
+        .btn:hover {
+            background: #2e59d9;
+        }
+        .btn .icon {
+            margin-right: 0.5rem;
+        }
+        .legend {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+            margin-top: 20px;
+        }
+        .legend h3 {
+            color: #4e73df;
+            font-size: 16px;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        .legend-color {
+            width: 30px;
+            height: 20px;
+            margin-right: 10px;
+            border-radius: 3px;
+            border: 1px solid rgba(255,255,255,0.5);
+        }
+        .info-box {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+            margin-top: 20px;
+        }
+        .info-box h3 {
+            color: #4e73df;
+            font-size: 16px;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+        .info-box p {
+            color: #666;
+            font-size: 14px;
+            line-height: 1.6;
+            margin-bottom: 10px;
+        }
+        .info-box .solution {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .info-box .solution h4 {
+            color: #856404;
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+        .info-box .solution p {
+            color: #856404;
+            margin: 5px 0;
+            font-size: 13px;
+        }
+        .info-box code {
+            background: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 12px;
+            color: #d11314;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <div class="card-header">
+                <h6>
+                    <span style="color: #4e73df;">Mapa</span> 
+                    <span class="histTitle">de Casos Confirmados</span>
+                    <br>
+                    <span style="color:#999999;font-size:11px;">
+                        (Visualización con polígonos geográficos de México)
+                    </span>
+                </h6>
+            </div>
+            <div class="card-body">
+                <div id="map"></div>
+                <div class="control-buttons">
+                    <button class="btn" onclick="centerMap()">
+                        <span class="icon"><i class="fas fa-compress-arrows-alt"></i></span>
+                        <span>centrar mapa</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="legend">
+            <h3>Nivel de Incidencia por 100k habitantes</h3>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(209, 19, 20, 1);"></div>
+                <span>Muy Alto (≥ 15,000)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(209, 19, 20, 0.8);"></div>
+                <span>Alto (8,000 - 15,000)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(209, 19, 20, 0.6);"></div>
+                <span>Medio (5,000 - 8,000)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(209, 19, 20, 0.4);"></div>
+                <span>Moderado (3,000 - 5,000)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(209, 19, 20, 0.2);"></div>
+                <span>Bajo (1,500 - 3,000)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(209, 19, 20, 0.1);"></div>
+                <span>Muy Bajo (< 1,500)</span>
+            </div>
+        </div>
+
+
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/leaflet.js"></script>
+    <script>
+        // Inicializar mapa
+        const map = L.map('map').setView([23.6345, -102.5528], 5);
+
+        // Agregar tiles de CartoDB
+        L.tileLayer('https://cartodb-basemaps-{s}.global.ssl.fastly.net/light_all/{z}/{x}/{y}.png', {
+            attribution: '© <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> © <a href="http://cartodb.com/attributions">CartoDB</a>',
+            maxZoom: 18,
+            subdomains: 'abcd'
+        }).addTo(map);
+
+        // Datos de incidencia por estado
+        const estadosData = {
+            'Aguascalientes': { incidencia: 6374.93, casos: 91457, poblacion: 1434635 },
+            'Baja California': { incidencia: 4955.28, casos: 180118, poblacion: 3634868 },
+            'Baja California Sur': { incidencia: 16272.49, casos: 130946, poblacion: 804708 },
+            'Campeche': { incidencia: 4452.35, casos: 44551, poblacion: 1000617 },
+            'Chiapas': { incidencia: 1045.36, casos: 59903, poblacion: 5730367 },
+            'Chihuahua': { incidencia: 4599.33, casos: 174843, poblacion: 3801487 },
+            'Coahuila': { incidencia: 5901.32, casos: 189947, poblacion: 3218720 },
+            'Coahuila de Zaragoza': { incidencia: 5901.32, casos: 189947, poblacion: 3218720 },
+            'Colima': { incidencia: 9222.92, casos: 72414, poblacion: 785153 },
+            'Durango': { incidencia: 4398.14, casos: 82201, poblacion: 1868996 },
+            'Guanajuato': { incidencia: 5999.59, casos: 373665, poblacion: 6228175 },
+            'Guerrero': { incidencia: 3315.52, casos: 121250, poblacion: 3657048 },
+            'Hidalgo': { incidencia: 4228.37, casos: 130505, poblacion: 3086414 },
+            'Jalisco': { incidencia: 3559.19, casos: 299317, poblacion: 8409693 },
+            'México': { incidencia: 4364.86, casos: 760699, poblacion: 17427790 },
+            'Estado de Mexico': { incidencia: 4364.86, casos: 760699, poblacion: 17427790 },
+            'Michoacán': { incidencia: 2453.50, casos: 118391, poblacion: 4825401 },
+            'Michoacan de Ocampo': { incidencia: 2453.50, casos: 118391, poblacion: 4825401 },
+            'Morelos': { incidencia: 4992.37, casos: 102047, poblacion: 2044058 },
+            'Nayarit': { incidencia: 6039.17, casos: 77819, poblacion: 1288571 },
+            'Nuevo León': { incidencia: 7672.71, casos: 430451, poblacion: 5610153 },
+            'Nuevo Leon': { incidencia: 7672.71, casos: 430451, poblacion: 5610153 },
+            'Oaxaca': { incidencia: 3879.10, casos: 160734, poblacion: 4143593 },
+            'Puebla': { incidencia: 3425.49, casos: 226235, poblacion: 6604451 },
+            'Querétaro': { incidencia: 8328.12, casos: 189851, poblacion: 2279637 },
+            'Queretaro': { incidencia: 8328.12, casos: 189851, poblacion: 2279637 },
+            'Quintana Roo': { incidencia: 7183.02, casos: 123782, poblacion: 1723259 },
+            'San Luis Potosí': { incidencia: 8956.46, casos: 256705, poblacion: 2866142 },
+            'San Luis Potosi': { incidencia: 8956.46, casos: 256705, poblacion: 2866142 },
+            'Sinaloa': { incidencia: 5871.65, casos: 185349, poblacion: 3156674 },
+            'Sonora': { incidencia: 6691.06, casos: 205733, poblacion: 3074745 },
+            'Tabasco': { incidencia: 8632.90, casos: 222063, poblacion: 2572287 },
+            'Tamaulipas': { incidencia: 5131.21, casos: 187320, poblacion: 3650602 },
+            'Tlaxcala': { incidencia: 4489.38, casos: 61954, poblacion: 1380011 },
+            'Veracruz': { incidencia: 2822.75, casos: 241059, poblacion: 8539862 },
+            'Veracruz de Ignacio de la Llave': { incidencia: 2822.75, casos: 241059, poblacion: 8539862 },
+            'Yucatán': { incidencia: 6458.77, casos: 145910, poblacion: 2259098 },
+            'Yucatan': { incidencia: 6458.77, casos: 145910, poblacion: 2259098 },
+            'Zacatecas': { incidencia: 5048.71, casos: 84133, poblacion: 1666426 },
+            'Ciudad de México': { incidencia: 21089.68, casos: 1902003, poblacion: 9018645 }
+        };
+
+        function getColor(incidencia) {
+            if (incidencia >= 15000) return { color: '#d11314', opacity: 1.0 };
+            if (incidencia >= 8000) return { color: '#d11314', opacity: 0.8 };
+            if (incidencia >= 5000) return { color: '#d11314', opacity: 0.6 };
+            if (incidencia >= 3000) return { color: '#d11314', opacity: 0.4 };
+            if (incidencia >= 1500) return { color: '#d11314', opacity: 0.2 };
+            return { color: '#d11314', opacity: 0.1 };
+        }
+
+        function style(feature) {
+            const stateName = feature.properties.NOMGEO || feature.properties.name || feature.properties.NAME || '';
+            const data = estadosData[stateName];
+            
+            if (data) {
+                const colorData = getColor(data.incidencia);
+                return {
+                    fillColor: colorData.color,
+                    fillOpacity: colorData.opacity,
+                    color: '#ffffff',
+                    weight: 1,
+                    opacity: 0.5
+                };
+            }
+            
+            return {
+                fillColor: '#cccccc',
+                fillOpacity: 0.3,
+                color: '#ffffff',
+                weight: 1,
+                opacity: 0.5
+            };
+        }
+
+        function highlightFeature(e) {
+            const layer = e.target;
+            layer.setStyle({
+                weight: 3,
+                color: '#666',
+                fillOpacity: 0.7
+            });
+            layer.bringToFront();
+        }
+
+        function resetHighlight(e) {
+            geojsonLayer.resetStyle(e.target);
+        }
+
+        function onEachFeature(feature, layer) {
+            const stateName = feature.properties.NOMGEO || feature.properties.name || feature.properties.NAME || 'Desconocido';
+            const data = estadosData[stateName];
+            
+            layer.on({
+                mouseover: highlightFeature,
+                mouseout: resetHighlight
+            });
+
+            if (data) {
+                layer.bindPopup(`
+                    <div style="font-family: Arial, sans-serif;">
+                        <h4 style="color: #4e73df; margin-bottom: 8px; font-size: 16px; font-weight: 700;">${stateName}</h4>
+                        <p style="margin: 5px 0; font-size: 13px;"><strong>Casos:</strong> ${data.casos.toLocaleString()}</p>
+                        <p style="margin: 5px 0; font-size: 13px;"><strong>Población:</strong> ${data.poblacion.toLocaleString()}</p>
+                        <p style="margin: 5px 0; font-size: 13px;"><strong>Tasa 100k/hab:</strong> ${data.incidencia.toFixed(2)}</p>
+                    </div>
+                `);
+            } else {
+                layer.bindPopup(`
+                    <div style="font-family: Arial, sans-serif;">
+                        <h4 style="color: #4e73df;">${stateName}</h4>
+                        <p>Sin datos disponibles</p>
+                    </div>
+                `);
+            }
+        }
+
+        let geojsonLayer = null;
+
+        async function loadStates() {
+            try {
+                const url = './estados.json';
+                
+                const response = await fetch(url);
+                
+                if (!response.ok) {
+                    throw new Error('No se pudo cargar el archivo GeoJSON');
+                }
+                
+                const geojsonData = await response.json();
+                
+                geojsonLayer = L.geoJSON(geojsonData, {
+                    style: style,
+                    onEachFeature: onEachFeature
+                }).addTo(map);
+                
+                map.fitBounds(geojsonLayer.getBounds());
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error al cargar los datos geográficos. Por favor, sigue las instrucciones debajo del mapa para solucionar este problema.');
+            }
+        }
+
+        function centerMap() {
+            if (geojsonLayer) {
+                map.fitBounds(geojsonLayer.getBounds());
+            } else {
+                map.setView([23.6345, -102.5528], 5);
+            }
+        }
+
+        loadStates();
+    </script>
+</body>
+</html>
