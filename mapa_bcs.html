@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mapa BCS Municipios — GitHub Pages</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/leaflet.css" />
+  <style>
+    #map { width: 100%; height: 80vh; }
+    .legend {
+      background: white; padding: 8px; border-radius: 5px;
+      box-shadow: 0 0 8px rgba(0,0,0,0.3);
+    }
+    .legend-item {
+      display: flex; align-items: center; margin-bottom: 4px;
+    }
+    .legend-color {
+      width: 20px; height: 20px; margin-right: 6px;
+      border: 1px solid #999;
+    }
+  </style>
+</head>
+<body>
+  <h2>Mapa de Municipios BCS (Valores Aleatorios)</h2>
+  <div id="map"></div>
+  <div id="legend" class="legend"></div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/leaflet.js"></script>
+  <script>
+    const map = L.map('map').setView([23.5, -110.5], 7);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap'
+    }).addTo(map);
+
+    const dataMun = {};
+    function getColor(val) {
+      if (val > 80) return '#08306b';
+      if (val > 60) return '#2171b5';
+      if (val > 40) return '#4292c6';
+      if (val > 20) return '#6baed6';
+      return '#c6dbef';
+    }
+    function styleFeature(feature) {
+      const name = feature.properties.NOMGEO;
+      const val = dataMun[name] || 0;
+      return {
+        fillColor: getColor(val),
+        weight: 1,
+        opacity: 1,
+        color: 'white',
+        fillOpacity: 0.7
+      };
+    }
+    function highlightFeature(e) {
+      const layer = e.target;
+      layer.setStyle({ weight: 3, color: '#666', fillOpacity: 0.9 });
+      layer.bringToFront();
+    }
+    function resetHighlight(e) { geojson.resetStyle(e.target); }
+    function onEachFeature(feature, layer) {
+      const name = feature.properties.NOMGEO;
+      const val = dataMun[name] || 0;
+      layer.on({ mouseover: highlightFeature, mouseout: resetHighlight });
+      layer.bindPopup(`<strong>${name}</strong><br>Valor: ${val}`);
+    }
+    let geojson;
+    async function loadGeo() {
+      const response = await fetch('ENTIDADES_BCS.geojson');
+      const geojsonData = await response.json();
+      geojsonData.features.forEach(f => {
+        const name = f.properties.NOMGEO;
+        dataMun[name] = Math.floor(Math.random() * 101);
+      });
+      geojson = L.geoJSON(geojsonData, { style: styleFeature, onEachFeature: onEachFeature }).addTo(map);
+      map.fitBounds(geojson.getBounds());
+      createLegend();
+    }
+    function createLegend() {
+      const legend = document.getElementById('legend');
+      const grades = [0, 20, 40, 60, 80];
+      legend.innerHTML = '<strong>Valor</strong><br>';
+      for (let i = 0; i < grades.length; i++) {
+        const from = grades[i];
+        const to = grades[i+1];
+        const color = getColor(from + 1);
+        const labelText = to ? `${from} – ${to}` : `${from}+`;
+        const div = document.createElement('div');
+        div.className = 'legend-item';
+        div.innerHTML = `<span class="legend-color" style="background:${color}"></span>${labelText}`;
+        legend.appendChild(div);
+      }
+    }
+    loadGeo();
+  </script>
+</body>
+</html>
